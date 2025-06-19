@@ -1,0 +1,33 @@
+[package]
+name = "platformer"
+version = "0.1.0"
+edition = "2024"
+
+[profile.dev]
+debug = 0
+strip = "debuginfo"
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[dependencies]
+bevy = { version = "0.16.1" }
+tracing = { version = "0.1.41" }
+log ={ version = "0.4.27" }
+
+[features]
+dev = [ "bevy/dynamic_linking" ]
+release = [ "tracing/release_max_level_off", "log/release_max_level_off" ]
+
+[profile.release]
+opt-level = 3
+panic = 'abort'
+debug = 0
+strip = "debuginfo"
+lto = "thin"
+
+[profile.distribution]
+inherits = "release"
+strip = true
+codegen-units = 1
