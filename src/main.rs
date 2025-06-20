@@ -27,6 +27,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Platformer".to_string(),
+                canvas: Some("#platformer".to_string()),
                 ..Default::default()
             }),
             ..Default::default()
