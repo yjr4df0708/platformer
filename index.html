@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Platformer</title>
+    </head>
+    <body style="margin: 0px;">
+        <div width="100%" style="display: flex; justify-content: center;">
+            <canvas id="platformer"></canvas>
+        </div>
+        <script type="module">
+            import init from './web/platformer.js'
+
+            init().catch((error) => {
+                if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+                    throw error;
+                }
+            });
+        </script>
+    </body>
+</html>
