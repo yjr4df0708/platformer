@@ -13,8 +13,9 @@ opt-level = 3
 
 [dependencies]
 bevy = { version = "0.16.1" }
-tracing = { version = "0.1.41" }
-log ={ version = "0.4.27" }
+bevy_rapier2d = { version = "0.30.0", features = [ "simd-stable", "parallel", "debug-render-2d" ] }
+tracing = "0.1.41"
+log = "0.4.27"
 
 [features]
 dev = [ "bevy/dynamic_linking" ]

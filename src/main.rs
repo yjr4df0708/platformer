@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum GameState{
@@ -18,8 +19,15 @@ fn cleanup_system<T: Component>(mut commands: Commands, q: Query<Entity, With<T>
     }
 }
 
+#[derive(Component)]
+pub struct MainCamera;
+
 fn startup(mut commands: Commands) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        MainCamera,
+        Camera2d,
+        Transform::from_xyz(0., 0., 0.)
+    ));
 }
 
 fn main() {
@@ -32,11 +40,13 @@ fn main() {
             }),
             ..Default::default()
         }))
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
         .insert_resource(Time::<Fixed>::from_hz(60.))
         .init_state::<GameState>()
         .add_systems(Startup, startup)
         .add_systems(Update, ui::ui_background_colors_system)
-        .add_plugins((state::plugin, menu::plugin, loading::plugin, running::plugin))
+        .add_plugins((state::plugin, menu::plugin, loading::plugin, mechanics::effect::plugin, running::plugin))
         .run();
 }
 

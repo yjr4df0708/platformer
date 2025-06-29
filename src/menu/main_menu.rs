@@ -4,8 +4,8 @@ use crate::{
     ui::*,
 };
 use super::{
-    MenuState, 
-    MenuEntity
+    MenuState,
+    MenuEntity,
 };
 
 #[derive(Component)]

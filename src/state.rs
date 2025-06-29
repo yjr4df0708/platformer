@@ -6,15 +6,17 @@ use bevy::prelude::*;
 pub fn plugin(app: &mut App) {
     app
         .insert_resource(GameMode::Campaign)
-        .insert_resource(Level(0))
         .insert_resource(Volume(0.))
+        .insert_resource(PlayerEntity(None))
+        .insert_resource(MainCameraEntity(None))
+        .insert_resource(CursorAngleRes(None))
+        .insert_resource(ClosestEnemyAngle(None))
     ;
 }
 
 pub mod prelude {
     pub use super::{
         GameMode,
-        Level,
         Volume,
     };
 }
@@ -27,7 +29,16 @@ pub enum GameMode {
 }
 
 #[derive(Resource)]
-pub struct Level(u32);
+pub struct Volume(pub f32);
 
 #[derive(Resource)]
-pub struct Volume(f32);
+pub struct PlayerEntity(pub Option<Entity>);
+
+#[derive(Resource)]
+pub struct MainCameraEntity(pub Option<Entity>);
+
+#[derive(Resource)]
+pub struct CursorAngleRes(pub Option<f32>);
+
+#[derive(Resource)]
+pub struct ClosestEnemyAngle(pub Option<f32>);
