@@ -2,7 +2,7 @@ use bevy::{
     math::ops::powf, prelude::*
 };
 
-pub const PI: f32 = 3.14159265358979;
+pub use std::f32::consts::PI;
 
 /* cast events are handled as child entities
  * mainly because actions are handled as ZST markers
@@ -149,6 +149,42 @@ impl PayloadStorage {//only the same getter and setter, same as Memory and could
     }
 }
 
+#[derive(Component, Debug, Default, Clone)]
+pub struct InterpreterState {
+    pub register: f32,
+    pub address: usize,
+    pub ip: usize,//instruction pointer, for internal use or jump instructions
+    pub angle: f32,
+    pub payload: Payload,
+    pub delay: u32,//number of ticks to wait until next run
+    pub capacity: u32,
+    pub actions: Vec<Action>,
+}
+
+impl InterpreterState {
+    fn tick(&mut self) -> Action {
+        if self.ip < self.actions.len() && self.delay == 0 {
+            self.ip += 1;
+            self.actions[self.ip - 1]
+        } else {
+            Action::default()
+        }
+    }
+}
+
+struct TickInterpreterDelay(Entity);
+
+impl Command<Result> for TickInterpreterDelay {
+    fn apply(self, world: &mut World) -> Result {
+        if let Some(mut state) = world.get_entity_mut(self.0)?.get_mut::<InterpreterState>() {
+            if state.delay > 0 {
+                state.delay -= 1;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Component)]
 pub struct CastEvents {
     pub list: Vec<Entity>,//all children of the current entity
@@ -203,13 +239,12 @@ impl CastEvents {
         mut query: Query<(Entity, &mut CastEvents)>,
     ) -> bool {
         let mut any_exist = false;
-        for (entity, cast_events) in &mut query {
-            let cast_events = cast_events.into_inner();
+        for (entity, mut cast_events) in &mut query {
             //move any existing cast event components into cast_events.list[cast_events.current]
             if let Some(n) = cast_events.current {
                 commands.queue(MoveCastState(cast_events.list[n], entity));
+                commands.queue(TickInterpreterDelay(cast_events.list[n]));
             }
-            //set cast_events.current = i
             cast_events.current = i;
             if let Some(i) = i {
                 if i < cast_events.list.len() {
@@ -245,18 +280,18 @@ impl ManualControl {
                 match control.0[i] {
                     InputType::KeyCode(keycode) => {
                         if keyboard.pressed(keycode) {
-                            commands.entity(cast_events.list[i]).entry::<InterpreterState>().and_modify(|state| {
-                                if state.ip == state.actions.len() {
-                                    state.into_inner().ip = 0;
+                            commands.entity(cast_events.list[i]).entry::<InterpreterState>().and_modify(|mut state| {
+                                if state.ip == state.actions.len() && state.delay == 0 {
+                                    state.ip = 0;
                                 }
                             });
                         }
                     },
                     InputType::Mouse(mouse_button) => {
                         if mouse.pressed(mouse_button) {
-                            commands.entity(cast_events.list[i]).entry::<InterpreterState>().and_modify(|state| {
-                                if state.ip == state.actions.len() {
-                                    state.into_inner().ip = 0;
+                            commands.entity(cast_events.list[i]).entry::<InterpreterState>().and_modify(|mut state| {
+                                if state.ip == state.actions.len() && state.delay == 0 {
+                                    state.ip = 0;
                                 }
                             });
                         }
@@ -264,30 +299,6 @@ impl ManualControl {
                 }
             }
         }
-    }
-}
-
-#[derive(Component, Debug, Default, Clone)]
-pub struct InterpreterState {
-    pub register: f32,
-    pub address: usize,
-    pub ip: usize,//instruction pointer, for internal use or jump instructions
-    pub angle: f32,
-    pub payload: Payload,
-    pub delay: u32,//number of ticks to wait until next run
-    pub capacity: u32,
-    pub actions: Vec<Action>,
-}
-
-impl InterpreterState {
-    fn tick(&mut self) -> Action {
-        if self.delay > 0 {
-            self.delay -= 1;
-        } else if (self.ip as usize) < self.actions.len() {
-            self.ip += 1;
-            return self.actions[(self.ip - 1) as usize];
-        }
-        Action::default()
     }
 }
 

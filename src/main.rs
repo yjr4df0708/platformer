@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-enum GameState{
+enum GameState {
     #[default]
     Menu,
     Loading,
@@ -40,16 +40,18 @@ fn main() {
             }),
             ..Default::default()
         }))
-        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierPhysicsPlugin::<mechanics::projectile::CollisionFilter>::pixels_per_meter(100.0).in_schedule(FixedPreUpdate))
         .add_plugins(RapierDebugRenderPlugin::default())
         .insert_resource(Time::<Fixed>::from_hz(60.))
         .init_state::<GameState>()
         .add_systems(Startup, startup)
         .add_systems(Update, ui::ui_background_colors_system)
-        .add_plugins((state::plugin, menu::plugin, loading::plugin, mechanics::effect::plugin, running::plugin))
+        .add_plugins((extrapolate::plugin, interpolate::plugin, state::plugin, menu::plugin, loading::plugin, mechanics::effect::plugin, running::plugin))
         .run();
 }
 
 pub mod ui;
 pub mod state;
 pub mod mechanics;
+pub mod extrapolate;
+pub mod interpolate;

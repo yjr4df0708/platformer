@@ -2,7 +2,7 @@ use bevy_rapier2d::prelude::*;
 use crate::state::CursorAngleRes;
 use super::*;
 use payload::Payload;
-use projectile::Projectile;
+use projectile::ProjectileType;
 
 #[derive(Component, Debug, Default, Clone, Copy)]
 pub enum Action {
@@ -21,32 +21,29 @@ pub enum Action {
     Power,
     FirePayload,
     BasicBullet,
+    Firebolt,
     Jet,
     Constant(f32),
 }
 
 impl Action {
     pub fn system(
+        mut commands: Commands,
         cursor_angle: Res<CursorAngleRes>,
         mut query: Query<(
+            Entity,
             &mut Caster,
             Option<&ReadMassProperties>,
             Option<&mut Velocity>,
+            &Transform,//maybe we can add teleport later, also this assumes no casters are child entities
             &mut PayloadStorage,
             &mut GlobalMemory,
             &mut Memory,
             &mut InterpreterState,
         )>,
     ) {
-        for (caster, read_mass_opt, vel_opt, payloads, global_memory, memory, state) in &mut query {
-            let (_caster, payloads,global_memory, memory, state) =
-                (caster.into_inner(), payloads.into_inner(), global_memory.into_inner(), memory.into_inner(), state.into_inner());
-            let action = state.tick();
-            /*if let Action::NoOp = action {} else {
-                println!("        running {:?}", action);
-                println!("state: {:?}", state);
-            }*/
-            match action {
+        for (entity, mut _caster, read_mass_opt, vel_opt, transform, mut payloads, mut global_memory, mut memory, mut state) in &mut query {
+            match state.tick() {
                 Action::NoOp => (),
                 Action::SwapRegisters => {
                     let temp = state.address;
@@ -54,49 +51,38 @@ impl Action {
                     state.register = temp as f32;
                 },
                 Action::SwapData => {
-                    let temp = state.register;
-                    let addr = state.address;
-                    let res = memory.get(addr);
-                    if let Ok(value) = res {
+                    if let Ok(value) = memory.get(state.address) {
+                        let temp = state.register;
                         state.register = value;
-                        memory.set(addr, temp).unwrap();
+                        memory.set(state.address, temp).unwrap();
                     } else {//in case of out of bounds error
                         state.register = 0.;
                     }
                 },
                 Action::SwapDataGlobal => {
-                    let temp = state.register;
-                    let addr = state.address;
-                    let res = global_memory.0.get(addr);
-                    if let Ok(value) = res {
+                    if let Ok(value) = global_memory.0.get(state.address) {
+                        let temp = state.register;
                         state.register = value;
-                        global_memory.0.set(addr, temp).unwrap();
+                        global_memory.0.set(state.address, temp).unwrap();
                     } else {
                         state.register = 0.;
                     }
                 },
                 Action::SwapPayload => {
-                    let temp = state.payload.clone();
-                    let addr = state.address;
-                    let res = payloads.get(addr);
-                    if let Ok(payload) = res {
+                    if let Ok(payload) = payloads.get(state.address) {
+                        let temp = state.payload.clone();
                         state.payload = payload;
-                        payloads.set(addr, temp).unwrap();
+                        payloads.set(state.address, temp).unwrap();
                     } else {
                         state.payload = Payload::default();//just delete the current payload?
                         //the user is trying to store it into a slot that doesn't exist
                     }
                 },
                 Action::WriteAngle => {
-                    let temp = state.register.rem_euclid(2. * PI);
-                    state.angle = temp;
+                    state.angle = state.register.rem_euclid(2. * PI);
                 },
                 Action::CursorAngle => {
-                    state.register = if let Some(angle) = cursor_angle.0 {
-                        angle
-                    } else {
-                        0.
-                    };
+                    state.register = cursor_angle.0.unwrap_or(0.);
                 },
                 Action::Add => {
                     if let Ok(value) = memory.get(state.address) {
@@ -125,24 +111,34 @@ impl Action {
                 },
                 Action::FirePayload => {
                     //todo check if there is enough mana before firing, drain mana...
+                    //should mana drain happen when building or firing payloads?
+                    //if it's on building it makes more sense, and forces players to reorder their actions, more interesting
+                    //spawn projectiles
+                    for projectile in &state.payload.projectiles {
+                        projectile.create_entity(commands.reborrow(), entity, state.angle, &state.payload, *transform, vel_opt.as_deref());
+                    }
                     //induce recoil
-                    if let (Some(read_mass), Some(velocity)) = (read_mass_opt, vel_opt) {
-                        let recoil = -state.payload.recoil * Vec2::from_angle(state.angle) / read_mass.get().mass;
-                        println!("applying {} of recoil with original recoil {} and mass {}", recoil.length(), state.payload.recoil, read_mass.get().mass);
-                        velocity.into_inner().linvel += recoil;
+                    if let (Some(read_mass), Some(mut velocity)) = (read_mass_opt, vel_opt) {
+                        velocity.linvel -= state.payload.recoil * Vec2::from_angle(state.angle) / read_mass.get().mass;
                     }
                     //destroy payload
                     state.payload = Payload::default();
                 },
                 Action::BasicBullet => {
                     //maybe cost mana, if not, remove &mut Caster
-                    let state = state;
                     state.payload = state.payload.add(&Payload {
-                        projectiles: vec![Projectile::BasicBullet],
+                        projectiles: vec![ProjectileType::BasicBullet],
                         ..default()
                     });
                     state.delay += 15;//quarter-second delay for adding a basic bullet projectile
                 },
+                Action::Firebolt => {
+                    state.payload = state.payload.add(&Payload {
+                        projectiles: vec![ProjectileType::Firebolt],
+                        ..default()
+                    });
+                    state.delay += 20;
+                }
                 Action::Jet => {
                     state.payload = state.payload.add(&Payload {
                         recoil: 1000000.,
