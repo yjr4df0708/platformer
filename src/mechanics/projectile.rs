@@ -1,6 +1,12 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::*,
+};
 use bevy_rapier2d::prelude::*;
-use crate::mechanics::effect::DealEffects;
+use crate::{
+    mechanics::effect::DealEffects,
+    running::RunningEntity,
+};
 
 use super::*;
 
@@ -80,6 +86,7 @@ impl ProjectileType {
         let mut new_transform = transform;
         new_transform.rotation = new_transform.rotation.mul_quat(Quat::from_rotation_z(angle));
         let projectile_entity = commands.spawn((
+            RunningEntity,
             RigidBody::Dynamic,
             Lifetime(300),
             Ccd::enabled(),

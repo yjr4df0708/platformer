@@ -25,7 +25,7 @@ use super::{cleanup_system, GameState};
 use bevy_rapier2d::prelude::*;
 
 #[derive(Component, Default)]
-struct RunningEntity;
+pub struct RunningEntity;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum RunningState{
@@ -67,8 +67,9 @@ fn on_enter(
             let temp = [
                 commands.spawn((
                     InterpreterState {
-                        actions: vec![Action::Constant(0.), Action::WriteAngle, Action::Jet, Action::FirePayload],
-                        ip: 4,
+                        angle: 0.,
+                        actions: vec![Action::Jet, Action::FirePayload],
+                        ip: 2,
                         ..default()
                     },
                     Memory {
@@ -78,8 +79,9 @@ fn on_enter(
                 )).id(),
                 commands.spawn((
                     InterpreterState {
-                        actions: vec![Action::Constant(PI), Action::WriteAngle, Action::Jet, Action::FirePayload],
-                        ip: 4,
+                        angle: PI,
+                        actions: vec![Action::Jet, Action::FirePayload],
+                        ip: 2,
                         ..default()
                     },
                     Memory {
@@ -89,8 +91,9 @@ fn on_enter(
                 )).id(),
                 commands.spawn((
                     InterpreterState {
-                        actions: vec![Action::Constant(-PI/2.), Action::WriteAngle, Action::Jet, Action::FirePayload],
-                        ip: 4,
+                        angle: -PI/2.,
+                        actions: vec![Action::Jet, Action::FirePayload],
+                        ip: 2,
                         ..default()
                     },
                     Memory {
