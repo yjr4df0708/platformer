@@ -1,5 +1,4 @@
 use bevy_rapier2d::prelude::*;
-use crate::state::CursorAngleRes;
 use super::*;
 use payload::Payload;
 use projectile::ProjectileType;
@@ -13,7 +12,7 @@ pub enum Action {
     SwapDataGlobal,
     SwapPayload,
     WriteAngle,
-    CursorAngle,
+    FocusAngle,
     Add,
     Sub,
     Mult,
@@ -29,9 +28,9 @@ pub enum Action {
 impl Action {
     pub fn system(
         mut commands: Commands,
-        cursor_angle: Res<CursorAngleRes>,
         mut query: Query<(
             Entity,
+            &CastFocus,
             &mut Caster,
             Option<&ReadMassProperties>,
             Option<&mut Velocity>,
@@ -42,7 +41,7 @@ impl Action {
             &mut InterpreterState,
         )>,
     ) {
-        for (entity, mut _caster, read_mass_opt, vel_opt, transform, mut payloads, mut global_memory, mut memory, mut state) in &mut query {
+        for (entity, focus, mut _caster, read_mass_opt, vel_opt, transform, mut payloads, mut global_memory, mut memory, mut state) in &mut query {
             match state.tick() {
                 Action::NoOp => (),
                 Action::SwapRegisters => {
@@ -81,8 +80,8 @@ impl Action {
                 Action::WriteAngle => {
                     state.angle = state.register.rem_euclid(2. * PI);
                 },
-                Action::CursorAngle => {
-                    state.register = cursor_angle.0.unwrap_or(0.);
+                Action::FocusAngle => {
+                    state.register = focus.0.unwrap_or(0.);
                 },
                 Action::Add => {
                     if let Ok(value) = memory.get(state.address) {

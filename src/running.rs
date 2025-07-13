@@ -15,10 +15,7 @@ use crate::{
         },
         *,
     },
-    state::{
-        CursorAngleRes,
-        GameMode,
-    },
+    state::GameMode,
     MainCamera,
 };
 use super::{cleanup_system, GameState};
@@ -45,7 +42,6 @@ pub fn plugin(app: &mut App) {
         .init_state::<RunningState>()
         .add_systems(OnEnter(GameState::Running), on_enter)
         .add_systems(FixedPreUpdate, (
-            CursorAngleRes::system,
             ProjectileGrace::system,
             Lifetime::system,
         ).run_if(in_state(RunningState::Active)))
@@ -64,7 +60,7 @@ fn on_enter(
     match gamemode.into_inner() {
         GameMode::Testing => {
             running_state.set(RunningState::Active);
-            let temp = [
+            let player_temp = [
                 commands.spawn((
                     InterpreterState {
                         angle: 0.,
@@ -103,7 +99,7 @@ fn on_enter(
                 )).id(),
                 commands.spawn((
                     InterpreterState {
-                        actions: vec![Action::CursorAngle, Action::WriteAngle, Action::FirePayload, Action::Firebolt],
+                        actions: vec![Action::FocusAngle, Action::WriteAngle, Action::FirePayload, Action::Firebolt],
                         ip: 3,
                         ..default()
                     },
@@ -120,8 +116,9 @@ fn on_enter(
                     InputType::KeyCode(KeyCode::Space),
                     InputType::Mouse(MouseButton::Left),
                 ]),
+                CastFocus(None),
                 CastEvents {
-                    list: Vec::from(temp),
+                    list: Vec::from(player_temp),
                     current: None,
                 },
                 Player,
@@ -163,12 +160,19 @@ fn on_enter(
                     LockedAxes::ROTATION_LOCKED,
                     Restitution::coefficient(0.1),
                 ),
-            )).add_children(&temp).id();
+            )).add_children(&player_temp).id();
             commands.entity(player_id).insert(ProjectileGrace(player_id, 0));
             commands.spawn((
                 Transform::from_xyz(0., -200., 0.),
-                Collider::cuboid(500., 100.),
+                Collider::cuboid(5000., 100.),
             ));
+            /*let enemy_temp = [
+                commands.spawn((
+                    InterpreterState {
+                        actions: []
+                    }
+                )).id(),
+            ];*/
         },
         _ => {},
     }

@@ -38,6 +38,8 @@ use action::Action;
 use payload::Payload;
 use damage::Damage;
 
+use crate::MainCamera;
+
 #[derive(Debug)]
 enum MechanicsError {
     AddrOutOfBounds,
@@ -186,6 +188,9 @@ impl Command<Result> for TickInterpreterDelay {
 }
 
 #[derive(Component)]
+pub struct CastFocus(pub Option<f32>);
+
+#[derive(Component)]
 pub struct CastEvents {
     pub list: Vec<Entity>,//all children of the current entity
     pub current: Option<usize>,
@@ -273,9 +278,14 @@ impl ManualControl {
         mut commands: Commands,
         mouse: Res<ButtonInput<MouseButton>>,
         keyboard: Res<ButtonInput<KeyCode>>,
-        query: Query<(&CastEvents, &ManualControl)>,
+        mut set: ParamSet<(
+            Query<(&CastEvents, &ManualControl)>,
+            Single<(&Transform, &mut CastFocus), With<Player>>,
+            Single<&Window>,
+            Single<(&Camera, &GlobalTransform), With<MainCamera>>,
+        )>,
     ) {
-        for (cast_events, control) in &query {
+        for (cast_events, control) in &set.p0() {
             for i in 0..cast_events.list.len().min(control.0.len()) {
                 match control.0[i] {
                     InputType::KeyCode(keycode) => {
@@ -299,6 +309,14 @@ impl ManualControl {
                 }
             }
         }
+        if let Some(world_position) = set.p2().cursor_position() {
+            let (camera, camera_transform) = *set.p3();
+            if let Ok(pos) = camera.viewport_to_world_2d(camera_transform, world_position) {
+                set.p1().1.0 = Some((pos - set.p1().0.translation.truncate()).to_angle());
+                return;
+            }
+        }
+        set.p1().1.0 = None;
     }
 }
 
